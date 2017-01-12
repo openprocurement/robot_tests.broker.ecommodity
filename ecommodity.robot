@@ -935,7 +935,7 @@ Scroll Page To Top
 Отримати інформацію із запитання
   [Arguments]  ${username}  ${tender_uaid}  ${question_id}  ${field_name}
   ${field_namefull}=  Отримати шлях до поля об’єкта  ${username}  ${field_name}  ${question_id}
-  ${value}=  run keyword  Отримати інформацію про ${field_namefull}
+  ${value}=  Run Keyword  Отримати інформацію про ${field_namefull}
   [return]  ${value}
 
 #SV
