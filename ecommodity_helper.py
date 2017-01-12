@@ -5,16 +5,6 @@ from pytz import timezone
 import os
 import urllib
 
-
-def polonex_convertdate(isodate):
-    date = dateutil.parser.parse(isodate)
-    return date.strftime("%Y-%m-%d %H:%M")
-
-def convert_date_polonex(isodate):
-    date = datetime.strptime(isodate, "%d-%m-%Y\n%H:%M")
-    res = date.strftime("%Y-%m-%d %H:%M:%S.%f")
-    return res
-
 def ecommodity_convertdate(isodate):
     date = dateutil.parser.parse(isodate)
     return date.strftime("%d.%m.%Y %H:%M")
@@ -67,11 +57,6 @@ def add_timezone_to_date(date_str):
     TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
     new_date_timezone = TZ.localize(new_date)
     return new_date_timezone.strftime("%Y-%m-%d %H:%M:%S%z")
-
-def convert_polonex_date_to_iso_format(date_time_from_ui):
-    new_timedata = datetime.strptime(date_time_from_ui, '%d-%m-%Y\n%H:%M')
-    new_date_time_string = new_timedata.strftime("%Y-%m-%d %H:%M:%S.%f")
-    return new_date_time_string
 
 def split_descr(str):
     return str.split(' - ')[1];
