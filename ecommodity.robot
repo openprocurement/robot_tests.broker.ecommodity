@@ -32,7 +32,6 @@ ${locator.tenderPeriod.endDate}                      name=auction_tenderPeriod_e
 ${locator.auctionPeriod.startDate}                   name=auction_auctionPeriod_startDate
 ${locator.auctionPeriod.endDate}                     name=auction_auctionPeriod_endDate
 ${locator.proposition.value.amount}                  xpath=//div[contains(@class, 'userbidinfo')]/span[contains(@id, 'userbidamount')]
-${locator.bids}		                                 xpath=//dd[@id='award_value_amount']
 ${locator.items[0].quantity}                         xpath=//dd[@name='items[0].quantity']
 ${locator.items.quantity}                         	 name={0}
 ${locator.items.description}                         name={0}
@@ -241,7 +240,6 @@ Login
   [Arguments]  ${username}  ${tender_uaid}
     Switch browser   ${username}
 	Go to   ${USERS.users['${username}'].homepage}
-	Click Element   xpath=//a[@id='ddTendersMenuId']
 	Click Element   ${prozorropage}
 	Wait Until Page Contains Element   xpath=//input[@id = 'AucShowFilterID']   15
 	Click Button   id=AucShowFilterID
@@ -531,10 +529,17 @@ Scroll Page To Top
 
 #SV  
 Отримати інформацію про bids
-  ${return_value}=   Отримати текст із поля і показати на сторінці   bids
-  ${return_value}=   ecommodity_convert_usnumber   ${return_value}
-  ${return_value}=   Convert To Number             ${return_value}
-  [Return]   ${return_value}
+	Execute JavaScript    $('.hiddenContentDetails').show();
+	Page Should Contain Element   xpath=//div[@id="bidsViewID"]
+	${present}=  Run Keyword And Return Status    Page Should Contain Element   xpath=//img[@id='loaderBids']
+	Run Keyword If  ${present}   Run Keywords
+	...   Execute Javascript   $('div[id="bidsViewID"]').hide();
+	...   AND   Click Element   xpath=//a[@id='action_bids_details']
+	...   AND   Wait Until Element Is Not Visible   xpath=//img[@id='loaderBids']   25
+	Execute JavaScript    $('.hiddenContentDetails').show();
+	Page Should Contain Element   xpath=//div[contains(@id,'bids_details_')]
+	${return_value}=     Get Matching Xpath Count  //div[contains(@id,'bids_details_')]
+	[Return]   ${return_value}
   
 #SV
 Подати цінову пропозицію
@@ -881,8 +886,15 @@ Scroll Page To Top
   ${return_value}=  Get Element Attribute          ${locator.cancellations[0].status}
   [Return]  ${return_value}
 
-#BO
+#SV
 Скасування рішення кваліфікаційної комісії
+    [Arguments]  ${username}  ${tender_uaid}  ${award_num}
+	Run Keyword If   'provider' in '${username}'
+	...  ecommodity.Скасування рішення кваліфікаційної комісії учасником  ${username}  ${tender_uaid}  ${award_num}
+	...  ELSE  ecommodity.Скасування рішення кваліфікаційної комісії замовником  ${username}  ${tender_uaid}  ${award_num}
+
+#BO
+Скасування рішення кваліфікаційної комісії замовником
     [Arguments]  ${username}  ${tender_uaid}  ${award_num}
 	ecommodity.Пошук тендера по ідентифікатору    ${username}    ${tender_uaid}
     sleep  1
@@ -893,14 +905,26 @@ Scroll Page To Top
 	Page Should Contain Element			xpath=//div[@name="awardDetails_${award_num}"]/descendant::select[@name="status"]/option[@value="cancelled"]
     Select From List					xpath=//div[@name="awardDetails_${award_num}"]/descendant::select[@name="status"]   cancelled
     Click Element						xpath=//div[@name="awardDetails_${award_num}"]/descendant::input[@name="awardPublishSubmit"]
-    #Wait Until Element Is Visible       xpath=//div[contains(@class,"bootbox")]   30
-    #Click Element						xpath=//button[@data-bb-handler='success']
-  
+
+#SV
+Скасування рішення кваліфікаційної комісії учасником
+    [Arguments]  ${username}  ${tender_uaid}  ${award_num}
+	ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+    Click Element       id=btnViewOwnBid
+    Sleep   1
+	Wait Until Element Is Visible   id=buttonRejectSecondPlaceBidUser   15
+	Click Button        id=buttonRejectSecondPlaceBidUser
+	Sleep   1
+	Click Element       xpath=//button[@data-bb-handler='success']
+
 #BO
 Дискваліфікувати постачальника
     [Arguments]  ${username}  ${tender_uaid}  ${award_num}  ${description}
 	ecommodity.Пошук тендера по ідентифікатору    ${username}    ${tender_uaid}
     sleep  1
+	${award_num}=   Run KeyWord If     ${award_num} == -1
+	...   Set Variable   1
+	...   ELSE   Set Variable   ${award_num}
     Click Element						xpath=//a[@id="btnQualification"]
     Wait Until Element Is Visible		xpath=//div[@name="awardShowDetails_${award_num}"]/descendant::input[@name="btnQualificationEdit"]   30
     Click Element						xpath=//div[@name="awardShowDetails_${award_num}"]/descendant::input[@name="btnQualificationEdit"]
@@ -910,8 +934,6 @@ Scroll Page To Top
 	Page Should Contain Element			xpath=//div[@name="awardDetails_${award_num}"]/descendant::select[@name="status"]/option[@value="unsuccessful"]
     Select From List					xpath=//div[@name="awardDetails_${award_num}"]/descendant::select[@name="status"]   unsuccessful
     Click Element						xpath=//div[@name="awardDetails_${award_num}"]/descendant::input[@name="awardPublishSubmit"]
-    #Wait Until Element Is Visible      xpath=//div[contains(@class,"bootbox")]   30
-    #Click Element						xpath=//button[@data-bb-handler='success']
 
 #BO
 Завантажити документ рішення кваліфікаційної комісії
@@ -927,9 +949,54 @@ Scroll Page To Top
 	Execute JavaScript					$(document.evaluate("/html/.//div[@name='awardDetails_${award_num}']/descendant::div[@name='newAwardDoc']/descendant::input[@id='uploadFile']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue).show()
 	Choose File							xpath=//div[@name='awardDetails_${award_num}']/descendant::div[@name='newAwardDoc']/descendant::input[@id='uploadFile']    ${document}
 	Sleep   1
+	Select From List					xpath=//div[@name="awardDetails_${award_num}"]/descendant::div[@name='newAwardDoc']/descendant::select[@id="documentType"]   notice
 	Click Element		xpath=//div[@name="awardDetails_${award_num}"]/descendant::div[@name='newAwardDoc']/descendant::input[@name="inputSaveDocument"]
     Click Element		xpath=//div[@name="awardDetails_${award_num}"]/descendant::input[@name="awardPublishSubmit"]
+
+#SV
+Завантажити протокол аукціону в авард
+	[Arguments]  ${username}  ${tender_uaid}  ${filepath}  ${award_index}
+	ecommodity.Пошук тендера по ідентифікатору    ${username}    ${tender_uaid}
+    sleep  1
+	${award_index}=   Run KeyWord If     ${award_index} == -1
+	...   Set Variable   1
+	...   ELSE   Set Variable   ${award_index}
+    Click Element						xpath=//a[@id="btnQualification"]
+	Wait Until Element Is Visible		xpath=//div[@name="awardShowDetails_${award_index}"]/descendant::input[@name="btnQualificationEdit"]   30
+    Click Element						xpath=//div[@name="awardShowDetails_${award_index}"]/descendant::input[@name="btnQualificationEdit"]
+	sleep   1	
+	Click Element						xpath=//div[@name="awardDetails_${award_index}"]/descendant::a[@name="addAwardDoc"]
+	Wait Until Element Is Visible		xpath=//div[@name="awardDetails_${award_index}"]/descendant::div[@name='newAwardDoc']/descendant::input[@name="inputSaveDocument"]    30   
+	Execute JavaScript					$(document.evaluate("/html/.//div[@name='awardDetails_${award_index}']/descendant::div[@name='newAwardDoc']/descendant::input[@id='uploadFile']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue).show()
+	Choose File							xpath=//div[@name='awardDetails_${award_index}']/descendant::div[@name='newAwardDoc']/descendant::input[@id='uploadFile']    ${filepath}
+	Sleep   1
+	Select From List					xpath=//div[@name="awardDetails_${award_index}"]/descendant::div[@name='newAwardDoc']/descendant::select[@id="documentType"]   auctionProtocol
+	Click Element		xpath=//div[@name="awardDetails_${award_index}"]/descendant::div[@name='newAwardDoc']/descendant::input[@name="inputSaveDocument"]
+    Click Element		xpath=//div[@name="awardDetails_${award_index}"]/descendant::input[@name="awardPublishSubmit"]
 	
+#SV
+Підтвердити наявність протоколу аукціону
+    [Arguments]  ${username}  ${tender_uaid}  ${award_index}
+	ecommodity.Пошук тендера по ідентифікатору    ${username}    ${tender_uaid}
+    sleep  1
+	${award_index}=   Run KeyWord If     ${award_index} == -1
+	...   Set Variable   1
+	...   ELSE   Set Variable   ${award_index}
+	Click Element						xpath=//a[@id="btnQualification"]
+	Wait Until Element Is Visible		xpath=//div[@name="awardShowDetails_${award_index}"]/descendant::input[@name="btnQualificationEdit"]   30
+	Click Element						xpath=//div[@name="awardShowDetails_${award_index}"]/descendant::input[@name="btnQualificationEdit"]
+	sleep   1
+	Page Should Contain Element			xpath=//div[@name="awardDetails_${award_index}"]/descendant::select[@name="status"]/option[@value="pending.payment"]
+	Select From List					xpath=//div[@name="awardDetails_${award_index}"]/descendant::select[@name="status"]   pending.payment
+	Click Element						xpath=//div[@name="awardDetails_${award_index}"]/descendant::input[@name="awardPublishSubmit"]
+	
+#SV
+Отримати інформацію про awards[${award_index}].status
+	${award_index}=   Run KeyWord If     ${award_index} == -1
+	...   Set Variable   1
+	...   ELSE   Set Variable   ${award_index}
+	${status}=   Get Element Attribute   xpath=//dd[@name="awards[${award_index}].status"]@title
+	[Return]   ${status}
 
 #SV
 Отримати інформацію із запитання
