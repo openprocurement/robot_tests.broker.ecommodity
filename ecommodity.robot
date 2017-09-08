@@ -56,7 +56,9 @@ ${locator.cancellations[0].status}                   id=tenderCancellationReason
 #SV
 Login
   [Arguments]  @{ARGUMENTS}
-  Click Element        xpath=//li[@id='loginLi']/a
+  Click Element        xpath=//a[@id='ddTCabinetMenuId']
+  Sleep   1
+  Click Element        xpath=//a[@id='loginLink']
   Sleep   1
   Clear Element Text   id=Email
   Input text      ${login_email}      ${USERS.users['${ARGUMENTS[0]}'].login}
@@ -238,17 +240,15 @@ Login
 #SV
 Пошук тендера по ідентифікатору
   [Arguments]  ${username}  ${tender_uaid}
-    Switch browser   ${username}
+	Switch browser   ${username}
 	Go to   ${USERS.users['${username}'].homepage}
 	Click Element   ${prozorropage}
-	Wait Until Page Contains Element   xpath=//input[@id = 'AucShowFilterID']   15
-	Click Button   id=AucShowFilterID
 	Wait Until Element Is Visible   xpath=//input[@id = 'btnClearFilter']   15
 	Scroll Page To Element XPATH   xpath=//input[@id='btnClearFilter']
 	Click Button   id=btnClearFilter
-    Input Text          id=tenderID   ${tender_uaid}
+	Input Text          id=tenderID   ${tender_uaid}
 	Scroll Page To Element XPATH   xpath=//input[@id='btnFilter']
-    Click Button       id=btnFilter
+	Click Button       id=btnFilter
 	Wait Until Element Is Not Visible   xpath=//div[@id = 'divFilter']/descendant::div[@name='loadingIDFilter']   25
 	Scroll Page To Top
 	Click Element   xpath=//a[@id = 'showDetails_${tender_uaid}']
@@ -543,33 +543,23 @@ Scroll Page To Top
   
 #SV
 Подати цінову пропозицію
-    [Arguments]  @{ARGUMENTS}
-    [Documentation]
+	[Arguments]  @{ARGUMENTS}
+	[Documentation]
     ...    ${ARGUMENTS[0]} ==  username
     ...    ${ARGUMENTS[1]} ==  tenderId
     ...    ${ARGUMENTS[2]} ==  ${test_bid_data}
-    ${status}=          Get From Dictionary   ${ARGUMENTS[2].data}          qualified
-    ${amount}=          Get From Dictionary   ${ARGUMENTS[2].data.value}    amount
-    ${amount}=          Convert To String     ${amount}
 	
-    Run Keyword If  ${status}
-    ...  ecommodity.Пошук тендера по ідентифікатору  ${ARGUMENTS[0]}  ${ARGUMENTS[1]}
-    ...  ELSE   Go To  ${USERS.users['${ARGUMENTS[0]}'].homepage}/Home/Error
-
-    Click Element       id=btnAddBid
-    Sleep   1
-	Wait Until Element Is Visible   xpath=//input[@id = 'value_amount']   15
-    Input Text          xpath=//input[@id = 'value_amount']       ${amount}
-    Sleep   1
+	ecommodity.Пошук тендера по ідентифікатору  ${ARGUMENTS[0]}  ${ARGUMENTS[1]}
+	Click Element       id=btnAddBid
+	Sleep   1
+	Wait Until Element Is Visible   xpath=//div[@id = 'bidBody']   15
+	Sleep   1
 	Click Button        id=btnLabelSubmitBid
 	Sleep   1
 	Click Element       xpath=//button[@data-bb-handler='success']
-    Wait Until Element Is Visible       xpath=//input[@type='submit' and @name='SendRequestToAdmin']   30
-    ${resp}=            Get Value                        xpath=//input[@id = 'value_amount']
-	${resp}=            ecommodity_convert_usnumber      ${resp}
-	${resp}=            Convert To Number                ${resp}
+	${resp}=            Get Element Attribute         xpath=//span[@id = 'span_bid_statusID']@title
 	Click Element       xpath=//input[@type='submit' and @name='SendRequestToAdmin']
-    [Return]    ${resp}
+	[Return]    ${resp}
 
 #SV
 Змінити цінову пропозицію
@@ -617,11 +607,6 @@ Scroll Page To Top
   Wait Until Element Is Visible       xpath=//span[@id = 'span_cbd_published']   15
   ${status}=               Get Element Attribute         xpath=//span[@id = 'span_bid_statusID']@title
   ${data}=                 Create Dictionary             status=${status}
-  ${proposition_amount}=   Get Value                     xpath=//input[@id = 'value_amount']
-  ${proposition_amount}=   ecommodity_convert_usnumber   ${proposition_amount}
-  ${proposition_amount}=   Convert To Number             ${proposition_amount}
-  ${value}=                Create Dictionary             amount=${proposition_amount}
-  Set To Dictionary  ${data}    value=${value}
   ${bid}=   Create Dictionary   data=${data}
   [return]  ${bid}
   
@@ -642,7 +627,7 @@ Scroll Page To Top
 	ecommodity.Отримати пропозицію   ${username}   ${tender_uaid}
 	Click Element        xpath=//a[@id = 'btnEditBid']
 	Sleep   1
-	Wait Until Element Is Visible   xpath=//input[@id = 'value_amount']   15
+	Wait Until Element Is Visible   xpath=//a[@id='add_bid_doc_']   15
 	Click Element        xpath=//a[@id='add_bid_doc_']
 	${documentTypeID}=   convert_documentType_string   ${documentType}
 	Wait Until Element Is Visible   xpath=//div[@id="DocumentBid"]/descendant::input[@id='titleID_NewDocument']   25
