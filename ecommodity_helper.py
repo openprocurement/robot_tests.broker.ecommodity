@@ -38,21 +38,29 @@ def set_procuringEntity_name(tender_data, name):
    return tender_data
 	
 def convert_ecommodity_date_to_iso_format(date_time_from_ui):
+    if date_time_from_ui.strip() == "":
+       return date_time_from_ui.strip()
     new_timedata = datetime.strptime(date_time_from_ui, '%d.%m.%Y %H:%M')
     new_date_time_string = new_timedata.strftime("%Y-%m-%d %H:%M:%S.%f")
     return new_date_time_string
 	
 def convert_ecommodity_sdate_to_iso_format(date_time_from_ui):
+    if date_time_from_ui.strip() == "":
+       return date_time_from_ui.strip()
     new_timedata = datetime.strptime(date_time_from_ui, '%d.%m.%Y')
     new_date_time_string = new_timedata.strftime("%Y-%m-%d %H:%M:%S.%f")
     return new_date_time_string
 	
 def convert_ecommodity_sdate_to_iso_sdate_format(date_time_from_ui):
+    if date_time_from_ui.strip() == "":
+       return date_time_from_ui.strip()
     new_timedata = datetime.strptime(date_time_from_ui, '%d.%m.%Y')
     new_date_time_string = new_timedata.strftime("%Y-%m-%d")
     return new_date_time_string
 
 def add_timezone_to_date(date_str):
+    if date_str.strip() == "":
+       return date_str.strip()
     new_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
     TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
     new_date_timezone = TZ.localize(new_date)
