@@ -48,7 +48,7 @@ ${locator.cancellations[0].status}                   id=tenderCancellationReason
 Підготувати клієнт для користувача
   [Arguments]     @{ARGUMENTS}
   [Documentation]  Відкрити брaвзер, створити обєкт api wrapper, тощо
-  Open Browser  ${USERS.users['${ARGUMENTS[0]}'].homepage}  ${USERS.users['${ARGUMENTS[0]}'].browser}  alias=${ARGUMENTS[0]}
+  Open Browser  ${USERS.users['${ARGUMENTS[0]}'].homepage}  ${USERS.users['${ARGUMENTS[0]}'].browser}  alias=ec_${ARGUMENTS[0]}
   Set Window Size       @{USERS.users['${ARGUMENTS[0]}'].size}
   Set Window Position   @{USERS.users['${ARGUMENTS[0]}'].position}
   Run Keyword If   '${ARGUMENTS[0]}' != 'ecommodity_viewer'   Login   ${ARGUMENTS[0]}
@@ -80,7 +80,7 @@ Login
     [Arguments]    @{ARGUMENTS}
     [Documentation]    ${ARGUMENTS[0]} = username
     ...      ${ARGUMENTS[1]} = ${TENDER_UAID}
-    Switch browser   ${ARGUMENTS[0]}
+    Switch browser   ec_${ARGUMENTS[0]}
     Go to   ${USERS.users['${ARGUMENTS[0]}'].homepage}
     ecommodity.Пошук тендера по ідентифікатору    ${ARGUMENTS[0]}    ${ARGUMENTS[1]}
 
@@ -126,7 +126,7 @@ Login
     ${number_of_items}=                          Get Length              ${items}
     ${tenderAttempts}=                           Convert To String       ${ARGUMENTS[1].data.tenderAttempts}
 	
-    Switch browser   ${ARGUMENTS[0]}
+    Switch browser   ec_${ARGUMENTS[0]}
     Go to   ${USERS.users['${ARGUMENTS[0]}'].homepage}
     Sleep   1
 	Click Element       xpath=//a[@id='ddTCabinetMenuId']
@@ -240,7 +240,7 @@ Login
 #SV
 Пошук тендера по ідентифікатору
   [Arguments]  ${username}  ${tender_uaid}
-	Switch browser   ${username}
+	Switch browser   ec_${username}
 	Go to   ${USERS.users['${username}'].homepage}
 	Click Element   ${prozorropage}
 	Wait Until Element Is Visible   xpath=//input[@id = 'btnClearFilter']   15
@@ -347,16 +347,29 @@ Scroll Page To Top
     ecommodity.Пошук тендера по ідентифікатору   ${username}  ${tender_uaid}
     ${res}=   Get Text      xpath=//span[@name='span_items_count']
     [return]  ${res}
-
-#SV
+	
+#BOV 2017/10/12
 Отримати інформацію із тендера
     [Arguments]  ${username}  ${tender_uaid}  ${field_name}
 	Execute JavaScript    $('.hiddenContentDetails').show();
+    ${return_value}=   Отримати інформацію із поля тендера  ${field_name}
+    ${return_value}=   Run Keyword If  "${return_value}"=="${EMPTY}"
+    ...  Run Keywords
+    ...  ecommodity.Оновити сторінку з тендером   ${username}   ${tender_uaid}
+    ...  AND
+    ...  ${return_value}=   ecommodity.Отримати інформацію із тендера  ${username}  ${tender_uaid}  ${field_name}
+    ...  ELSE   Set Variable   ${return_value}
+    [Return]  ${return_value}
+
+#BOV 2017/10/12
+Отримати інформацію із поля тендера
+    [Arguments]  ${field_name}
 	${check_for_items}=  Get Substring  ${field_name}  0  6
+    ${return_value}=   Set Variable  ${EMPTY}
 	${return_value}=   Run Keyword If   "${check_for_items}" == "items["   Отримати інформацію із предмету тендера   ${field_name}
     ...   ELSE   Отримати інформацію про ${field_name}
     [Return]  ${return_value}
-
+	
 #SV
 Отримати інформацію із предмету
   [Arguments]  ${username}  ${tender_uaid}  ${item_id}  ${field_name}
@@ -639,7 +652,7 @@ Scroll Page To Top
 	${fake_name}=   Get Value   xpath=//div[@id="DocumentBid"]/descendant::input[@id="DocumentuploadFileId_NewDocument"]
 	Input Text      xpath=//div[@id="DocumentBid"]/descendant::input[@id='titleID_NewDocument']   ${fake_name}
 	Click Element   xpath=//div[@id="DocumentBid"]/descendant::input[@name='AddBidDocument']
-	Wait Until Element Is Not Visible   xpath=//div[@id="DocumentBid"]   20
+	Wait Until Page Does Not Contain   xpath=//div[@id="DocumentBid"]   20
 	Click Button       id=btnLabelSubmitBid
 	Sleep   1
 	Click Element       xpath=//button[@data-bb-handler='success']
@@ -663,7 +676,7 @@ Scroll Page To Top
 	${fake_name}=   Get Value   xpath=//div[@id="DocumentBid"]/descendant::input[@id="DocumentuploadFileId_NewDocument"]
 	Input Text      xpath=//div[@id="DocumentBid"]/descendant::input[@id='titleID_NewDocument']   ${fake_name}
 	Click Element   xpath=//div[@id="DocumentBid"]/descendant::input[@name='AddBidDocument']
-	Wait Until Element Is Not Visible   xpath=//div[@id="DocumentBid"]   10
+	Wait Until Page Does Not Contain   xpath=//div[@id="DocumentBid"]   10
 	Click Button       id=btnLabelSubmitBid
 	Sleep   1
 	Click Element   xpath=//button[@data-bb-handler='success']
@@ -683,8 +696,7 @@ Scroll Page To Top
 	${fake_name}=   Get Value   xpath=//div[@id="auctionProtocolBid"]/descendant::input[@id="DocumentuploadFileId_NewDocument"]
 	Input Text      xpath=//div[@id="auctionProtocolBid"]/descendant::input[@id='titleID_NewDocument']   ${fake_name}
 	Click Element   xpath=//div[@id="auctionProtocolBid"]/descendant::input[@name='AddAuctionProtocol']
-	Wait Until Element Is Not Visible   xpath=//div[@id="auctionProtocolBid"]   20
-	Wait Until Element Is Not Visible   id=btnAddAuctionProtocol   20
+	Wait Until Page Does Not Contain   xpath=//div[@id="auctionProtocolBid"]   20
 	Sleep   1
 
 #SV
@@ -1000,8 +1012,12 @@ Scroll Page To Top
 
 #SV
 Отримати посилання на аукціон для учасника
-    [Arguments]  ${username}  ${tender_uaid}
-	ecommodity.Отримати пропозицію   ${username}   ${tender_uaid}
+    [Arguments]  ${username}  ${tender_uaid}  ${lot_id}=${Empty}
+    ecommodity.Отримати пропозицію   ${username}   ${tender_uaid}
+    ${notpresent}=   Run Keyword And Return Status   Page Should Not Contain Element   id=private_participationUrl
+    Run Keyword If   ${notpresent}   Run Keywords
+    ...   sleep   102
+    ...   AND   ecommodity.Отримати пропозицію   ${username}   ${tender_uaid}
     ${result}=                  Get Element Attribute               id=private_participationUrl@title
     [Return]   ${result}
 
