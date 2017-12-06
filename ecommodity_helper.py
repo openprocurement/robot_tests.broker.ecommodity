@@ -36,19 +36,26 @@ def get_upload_file_path():
 def set_procuringEntity_name(tender_data, name):
    tender_data['data']['procuringEntity']['name'] = name
    return tender_data
-	
+
+def set_item_property(tender_data):
+   for item in tender_data['data']['items']:
+    if item['classification']['scheme'] == u'CAV-PS' and item['classification']['id'].startswith(u'04') or item['classification']['scheme'] == u'CPV' and item['classification']['id'].startswith(u'70'):
+     item['unit']['code'] = u'MTK'
+     item['unit']['name'] = u'метри квадратні'
+   return tender_data
+
 def convert_ecommodity_date_to_iso_format(date_time_from_ui):
     if date_time_from_ui.strip() == "":
        return date_time_from_ui.strip()
     new_timedata = datetime.strptime(date_time_from_ui, '%d.%m.%Y %H:%M')
-    new_date_time_string = new_timedata.strftime("%Y-%m-%d %H:%M:%S.%f")
+    new_date_time_string = new_timedata.isoformat()
     return new_date_time_string
 	
 def convert_ecommodity_sdate_to_iso_format(date_time_from_ui):
     if date_time_from_ui.strip() == "":
        return date_time_from_ui.strip()
     new_timedata = datetime.strptime(date_time_from_ui, '%d.%m.%Y')
-    new_date_time_string = new_timedata.strftime("%Y-%m-%d %H:%M:%S.%f")
+    new_date_time_string = new_timedata.isoformat()
     return new_date_time_string
 	
 def convert_ecommodity_sdate_to_iso_sdate_format(date_time_from_ui):
@@ -61,10 +68,19 @@ def convert_ecommodity_sdate_to_iso_sdate_format(date_time_from_ui):
 def add_timezone_to_date(date_str):
     if date_str.strip() == "":
        return date_str.strip()
-    new_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    new_date = dateutil.parser.parse(date_str)
     TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
     new_date_timezone = TZ.localize(new_date)
-    return new_date_timezone.strftime("%Y-%m-%d %H:%M:%S%z")
+    return new_date_timezone.isoformat()
+
+def convert_ecommodity_contractPeriod_to_iso_format(date_time_from_ui):
+    if date_time_from_ui.strip() == "":
+       return date_time_from_ui.strip()
+    new_timedata = datetime.strptime(date_time_from_ui, '%d.%m.%Y')
+    TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
+    new_timedata = TZ.localize(new_timedata)
+    new_date_time_string = new_timedata.isoformat()
+    return new_date_time_string
 
 def split_descr(str):
     return str.split(' - ')[1];
@@ -91,6 +107,8 @@ def convert_ecommodity_string(string):
             u'Аукціон відмінено':      'cancelled',
             u'Чернетка':               'draft',
             u'Майна банків':           'dgfOtherAssets',
+            u'Продажу':           'dgfOtherAssets',
+            u'Оренди':           'dgfOtherAssets',
             u'Прав вимоги за кредитами': 'dgfFinancialAssets',
             u'Голландський аукціон':   'dgfInsider',
             u'Грн.': 'UAH',
@@ -112,8 +130,10 @@ def convert_documentType_string(string):
             'virtualDataRoom': '29',
             'illustration': '30',
             'financialLicense': '31',
+            'auctionProtocol': '32',
             'x_dgfPublicAssetCertificate': '33',
             'x_presentation': '34',
             'x_nda': '35',
             'x_dgfAssetFamiliarization': '37',
+            'awardDisqualification': '38',
             }.get(string, string)
