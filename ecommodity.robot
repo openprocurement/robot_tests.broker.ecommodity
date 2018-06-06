@@ -250,7 +250,8 @@ Login
 
 
 Отримати інформацію про status
-  reload page
+  Reload Page
+  Execute JavaScript    $('.hiddenContentDetails').show();
   ${return_value}=   Отримати текст із поля і показати на сторінці   status
   ${return_value}=   Run Keyword If  '${MODE}'=='lots'
   ...   convert_ecommodity_string   LOT_${return_value}
@@ -263,6 +264,8 @@ Login
   [Return]  ${return_value}
 
 Отримати інформацію про dateModified
+  Reload Page
+  Execute JavaScript    $('.hiddenContentDetails').show();
   ${return_value}=   Get Element Attribute   name=asset_dateModified@isodate
   [Return]  ${return_value}
 
@@ -617,6 +620,8 @@ Login
   [Return]  ${return_value}
 
 Отримати інформацію про auctions[${auc_num}].auctionPeriod.startDate
+  Reload Page
+  Execute JavaScript    $('.hiddenContentDetails').show();
   ${return_value}=   Get Element Attribute   name=auctions[${auc_num}].auctionPeriod.startDate@isodate
   [Return]  ${return_value}
 
