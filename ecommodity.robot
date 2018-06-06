@@ -105,7 +105,7 @@ Login
     Input text  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::input[@id='contactPoint_url']         ${h_CP_url}
     Click Element  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::input[@id='saveCreateAssetHolderID']
     Sleep  1
-    Wait Until Page Does Not Contain  xpath=//form[@id = 'formCreateAssetHolderID']  15
+    Wait Until Page Does Not Contain Element  xpath=//form[@id = 'formCreateAssetHolderID']  15
     Sleep  1
     Click Element  xpath=//input[@id='tenderCreateSubmitId']
     Sleep  1
@@ -250,7 +250,8 @@ Login
 
 
 Отримати інформацію про status
-  reload page
+  Reload Page
+  Execute JavaScript    $('.hiddenContentDetails').show();
   ${return_value}=   Отримати текст із поля і показати на сторінці   status
   ${return_value}=   Run Keyword If  '${MODE}'=='lots'
   ...   convert_ecommodity_string   LOT_${return_value}
@@ -263,6 +264,8 @@ Login
   [Return]  ${return_value}
 
 Отримати інформацію про dateModified
+  Reload Page
+  Execute JavaScript    $('.hiddenContentDetails').show();
   ${return_value}=   Get Element Attribute   name=asset_dateModified@isodate
   [Return]  ${return_value}
 
@@ -306,7 +309,7 @@ Login
 
 
 Отримати інформацію про documents[${document_index}].documentType
-  ${path_value}=   Set Variable  xpath=//div[@id='tenderDocumentsDetails']/descendant::div[@name='div_document_body_${document_index}']/descendant::dd[@name='documents.documentType']
+  ${path_value}=   Set Variable  xpath=//div[@name='partialDocumentDetails']/descendant::div[@name='div_document_body_${document_index}']/descendant::dd[@name='documents.documentType']
   ${return_value}=   Get Element Attribute   ${path_value}@title
   [Return]  ${return_value}
 
@@ -408,7 +411,7 @@ Login
   Sleep   1
   Run KeyWord  Внести зміни в актив об'єкта МП поле ${fieldname}  ${fieldvalue}
   Click Element  id=saveEditItemID
-  Wait Until Page Does Not Contain   xpath=//div[@id='tender_item_template_id']   25
+  Wait Until Page Does Not Contain Element   xpath=//div[@id='tender_item_template_id']   25
   ecommodity.Пошук об’єкта МП по ідентифікатору  ${username}  ${asset_uaid}
 
 Внести зміни в актив об'єкта МП поле quantity
@@ -461,8 +464,8 @@ Login
 Отримати документ
   [Arguments]  ${username}  ${asset_uaid}  ${doc_id}
   Execute JavaScript   $('.hiddenContentDetails').show();
-  ${file_name}=   Get Text   xpath=//div[@id='tenderDocumentsDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::dd[@name='documents.title']
-  ${url}=   Get Element Attribute   xpath=//div[@id='tenderDocumentsDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::a[@name='documents.url']@href
+  ${file_name}=   Get Text   xpath=//div[@name='partialDocumentDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::dd[@name='documents.title']
+  ${url}=   Get Element Attribute   xpath=//div[@name='partialDocumentDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::a[@name='documents.url']@href
   ecommodity_download_file   ${url}  ${file_name}  ${OUTPUT_DIR}
   [return]  ${file_name}
 
@@ -617,6 +620,8 @@ Login
   [Return]  ${return_value}
 
 Отримати інформацію про auctions[${auc_num}].auctionPeriod.startDate
+  Reload Page
+  Execute JavaScript    $('.hiddenContentDetails').show();
   ${return_value}=   Get Element Attribute   name=auctions[${auc_num}].auctionPeriod.startDate@isodate
   [Return]  ${return_value}
 
@@ -647,11 +652,12 @@ Login
   Click Element  id=btnEditLot
   Sleep   1
   Run KeyWord  Внести зміни в лот поле ${fieldname}  ${fieldvalue}
-  Click Element  id=clickPublishSubmitId
+  Scroll Page To Element XPATH  xpath=//input[@id='clickPublishSubmitId']
+  Click Element  xpath=//input[@id='clickPublishSubmitId']
   Sleep   1
-  ${ispost}=   Run Keyword And Return Status   Wait Until Page Does Not Contain  xpath=//form[@id='formSPLotEditID']  15
-  Run Keyword Unless  ${ispost}  Click Element  id=clickPublishSubmitId
-  Wait Until Page Does Not Contain  xpath=//form[@id='formSPLotEditID']  15
+  ${ispost}=   Run Keyword And Return Status   Wait Until Page Does Not Contain Element  xpath=//form[@id='formSPLotEditID']  15
+  Run Keyword Unless  ${ispost}  Click Element  xpath=//input[@id='clickPublishSubmitId']
+  Wait Until Page Does Not Contain Element  xpath=//form[@id='formSPLotEditID']  15
   ecommodity.Пошук лоту по ідентифікатору  ${username}  ${lot_uaid}
 
 Внести зміни в лот поле title
@@ -674,7 +680,7 @@ Login
   Sleep   1
   Run KeyWord  Внести зміни в актив лоту поле ${fieldname}  ${fieldvalue}
   Click Element  id=saveEditItemID
-  Wait Until Page Does Not Contain   xpath=//div[@id='tender_item_template_id']   15
+  Wait Until Page Does Not Contain Element   xpath=//div[@id='tender_item_template_id']   15
   ecommodity.Пошук лоту по ідентифікатору  ${username}  ${lot_uaid}
 
 Внести зміни в актив лоту поле quantity
