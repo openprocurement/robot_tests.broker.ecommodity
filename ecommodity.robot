@@ -647,9 +647,11 @@ Login
   Click Element  id=btnEditLot
   Sleep   1
   Run KeyWord  Внести зміни в лот поле ${fieldname}  ${fieldvalue}
-  Click Button  id=clickPublishSubmitId
+  Click Element  id=clickPublishSubmitId
   Sleep   1
-  Wait Until Element Is Visible   xpath=//span[@id = 'lotUAID']   30
+  ${ispost}=   Run Keyword And Return Status   Wait Until Page Does Not Contain  xpath=//form[@id='formSPLotEditID']  15
+  Run Keyword Unless  ${ispost}  Click Element  id=clickPublishSubmitId
+  Wait Until Page Does Not Contain  xpath=//form[@id='formSPLotEditID']  15
   ecommodity.Пошук лоту по ідентифікатору  ${username}  ${lot_uaid}
 
 Внести зміни в лот поле title
