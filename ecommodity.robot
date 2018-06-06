@@ -309,7 +309,7 @@ Login
 
 
 Отримати інформацію про documents[${document_index}].documentType
-  ${path_value}=   Set Variable  xpath=//div[@id='tenderDocumentsDetails']/descendant::div[@name='div_document_body_${document_index}']/descendant::dd[@name='documents.documentType']
+  ${path_value}=   Set Variable  xpath=//div[@name='partialDocumentDetails']/descendant::div[@name='div_document_body_${document_index}']/descendant::dd[@name='documents.documentType']
   ${return_value}=   Get Element Attribute   ${path_value}@title
   [Return]  ${return_value}
 
@@ -464,8 +464,8 @@ Login
 Отримати документ
   [Arguments]  ${username}  ${asset_uaid}  ${doc_id}
   Execute JavaScript   $('.hiddenContentDetails').show();
-  ${file_name}=   Get Text   xpath=//div[@id='tenderDocumentsDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::dd[@name='documents.title']
-  ${url}=   Get Element Attribute   xpath=//div[@id='tenderDocumentsDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::a[@name='documents.url']@href
+  ${file_name}=   Get Text   xpath=//div[@name='partialDocumentDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::dd[@name='documents.title']
+  ${url}=   Get Element Attribute   xpath=//div[@name='partialDocumentDetails']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::a[@name='documents.url']@href
   ecommodity_download_file   ${url}  ${file_name}  ${OUTPUT_DIR}
   [return]  ${file_name}
 
