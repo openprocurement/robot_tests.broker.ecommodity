@@ -569,7 +569,7 @@ Login
   ${return_value}=   Отримати текст із поля і показати на сторінці   lotID
   [Return]  ${return_value}
 
-Отримати інформацію про assets[0]
+Отримати інформацію про assets
   ${return_value}=   Отримати текст із поля і показати на сторінці   assetsID
   [Return]  ${return_value}
 
