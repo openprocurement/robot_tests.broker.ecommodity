@@ -57,6 +57,12 @@ def ecommodity_set_custodian(tender_data):
    tender_data['data']['assetCustodian']['address']['countryName'] = u'Україна'
    return tender_data
 
+def convert_CAVMP(string):
+    return {
+            '08110000-0': '301',
+            '08160000-5': '302',
+            }.get(string, string)
+
 def set_item_property(tender_data):
    for item in tender_data['data']['items']:
     if item['classification']['scheme'] == u'CAV-PS' and item['classification']['id'].startswith(u'04') or item['classification']['scheme'] == u'CPV' and item['classification']['id'].startswith(u'70'):
@@ -138,6 +144,17 @@ def convert_ecommodity_string(string):
             u'LOT_Об’єкт в процесі виключення':                             'pending.deleted',
             u'LOT_Об’єкт виключено':                                        'deleted',
             u'LOT_Недійсний':                                               'invalid',
+            u'SELLOUT_Аукціон малої приватизації':                          'sellout.english',
+            u'SELLOUT_Аукціон із зниженням стартової ціни':                 'sellout.english',
+            u'SELLOUT_Аукціон за методом покрокового зниження стартової ціни та подальшого подання цінових пропозицій':   'sellout.insider',
+            u'SELLOUT_Прийняття заяв на участь':             'active.tendering',
+            u'SELLOUT_Аукціон':                              'active.auction',
+            u'SELLOUT_Очікується опублікування протоколу':   'active.qualification',
+            u'SELLOUT_Очікується опублікування договору':    'active.awarded',
+            u'SELLOUT_Аукціон не відбувся':                  'unsuccessful',
+            u'SELLOUT_Аукціон відбувся':                     'complete',
+            u'SELLOUT_Аукціон відмінено':                    'cancelled',
+            u'SELLOUT_Чернетка':                             'draft',
             u'Очікування пропозицій':  'active.tendering',
             u'Період аукціону':        'active.auction',
             u'Кваліфікація переможця': 'active.qualification',
