@@ -11,13 +11,23 @@ ${login_pass}                                  id=Password
 ${locator.assetID}                             name=auction_tenderID
 ${locator.lotID}                               name=auction_tenderID
 ${locator.assetsID}                            name=assetID
+${locator.auctionID}                           name=auction_tenderID
 ${locator.date}                                name=asset_date
 ${locator.dateModified}                        name=asset_dateModified
 ${locator.rectificationPeriod.endDate}         name=auction_rectificationPeriod_endDate
 ${locator.status}                              name=auction_status
 ${locator.title}                               name=auction_title
 ${locator.description}                         name=auction_description
-
+${locator.minNumberOfQualifiedBids}            name=auction_minNumberOfQualifiedBids
+${locator.procurementMethodType}               name=auction_procurementMethodType
+${locator.procuringEntity.name}                name=auction_procuringEntity_name
+${locator.value.amount}                        name=auction_value_amount
+${locator.minimalStep.amount}                  name=auction_minimalStep_amount
+${locator.guarantee.amount}                    name=auction_guarantee_amount
+${locator.registrationFee.amount}              name=auction_registrationFee_amount
+${locator.tenderPeriod.endDate}                name=auction_tenderPeriod_endDate
+${locator.cancellations[0].reason}                   id=tenderCancellationReason
+${locator.cancellations[0].status}                   id=tenderCancellationReason@title
 
 *** Keywords ***
 
@@ -67,9 +77,9 @@ Login
     ${decisionTitle}=  Get From Dictionary  ${tender_data.data.decisions[0]}    title
     Input text         id=title                       ${title}
     Input text         id=description                 ${description}
-    Input text         id=AssetDecision_title         ${decisionTitle}
-    Input text         id=AssetDecision_decisionDate  ${decisionDate}
-    Input text         id=AssetDecision_decisionID    ${decisionID}
+    Input text         name=[0].title                 ${decisionTitle}
+    Input text         name=[0].decisionDate          ${decisionDate}
+    Input text         name=[0].decisionID            ${decisionID}
     Click Element      xpath=//a[@id='actionCreateHolderID']
     Sleep  2
     Wait Until Page Contains Element  xpath=//form[@id = 'formCreateAssetHolderID']  15
@@ -111,7 +121,7 @@ Login
     Sleep  1
     Wait Until Page Contains Element  xpath=//input[@id = 'clickPublishSubmitId']  15
     Sleep  1
-    Input text  xpath=//form[@id='formSPAssetEditID']/descendant::input[@id='AssetDecision_decisionDate']        ${decisionDate}
+    Input text  xpath=//form[@id='formSPAssetEditID']/descendant::input[@name='[0].decisionDate']               ${decisionDate}
     ${items}=  Get From Dictionary  ${tender_data.data}  items
     ${number_of_items}=  Get Length  ${items}
     :FOR  ${index}  IN RANGE  ${number_of_items}
@@ -126,8 +136,8 @@ Login
     [Arguments]  ${item}
     ${item_description}=                     Get From Dictionary         ${item}                       description
     ${classification_scheme}=                Get From Dictionary         ${item.classification}        scheme
-    ${classification_description}=           Get From Dictionary         ${item.classification}        description
     ${classification_id}=                    Get From Dictionary         ${item.classification}        id
+    ${classification_id}=                    convert_CAVMP               ${classification_id}
     ${address_postalcode}=                   Get From Dictionary         ${item.address}               postalCode
     ${address_countryname}=                  Get From Dictionary         ${item.address}               countryName
     ${address_streetaddress}=                Get From Dictionary         ${item.address}               streetAddress
@@ -165,9 +175,7 @@ Login
     Sleep   2
     Input text                      xpath=//div[@id='tender_item_template_id']/descendant::textarea[@id='description']  ${item_description}
     Input text                      xpath=//div[@id='tender_item_template_id']/descendant::input[@id='quantityId']      ${quantity}
-    Run Keyword If                  '${classification_scheme}' == 'CPV'
-    ...   Click Element             xpath=//div[@id='tender_item_template_id']/descendant::a[@id='CPV_Classifier_select_ID']
-    ...   ELSE   Click Element      xpath=//div[@id='tender_item_template_id']/descendant::a[@id='CAVPS_Classifier_select_ID']
+    Click Element                   xpath=//div[@id='tender_item_template_id']/descendant::a[@id='CAVPS_Classifier_select_ID']
     Sleep   1
     Wait Until Page Contains Element    xpath=//div[@id = 'modalBodyClassifyID']/descendant::input[@id='KeyWord']   15
     Wait Until Element Is Not Visible   xpath=//div[@id = 'modalBodyClassifyID']/descendant::img[@name='loadingIDHeader']   15
@@ -176,7 +184,7 @@ Login
     Click Element                   xpath=//div[@id = 'modalBodyClassifyID']/descendant::div[@id='searchId']
     Sleep   1
     Wait Until Element Is Not Visible   xpath=//div[@id = 'modalBodyClassifyID']/descendant::img[@name='loadingIDBody']   15
-    Click Element       xpath=//div[@id = 'modalBodyClassifyID']/descendant::table/descendant::tr[1]
+    Click Element       xpath=//div[@id = 'modalBodyClassifyID']/descendant::table/descendant::td[@data-id='${classification_id}']
     Click Button        id=okButton
     Sleep   1
     Select From List    xpath=//div[@id='tender_item_template_id']/descendant::select[@id="unit_code"]                   ${unit_code}
@@ -253,9 +261,10 @@ Login
   Reload Page
   Execute JavaScript    $('.hiddenContentDetails').show();
   ${return_value}=   Отримати текст із поля і показати на сторінці   status
-  ${return_value}=   Run Keyword If  '${MODE}'=='lots'
-  ...   convert_ecommodity_string   LOT_${return_value}
-  ...   ELSE   convert_ecommodity_string   ASSET_${return_value}
+  ${return_value}=   Run Keyword If  '${MODE}'=='lots'   convert_ecommodity_string   LOT_${return_value}
+  ...   ELSE IF   '${MODE}'=='assets'                    convert_ecommodity_string   ASSET_${return_value}
+  ...   ELSE IF   '${MODE}'=='auctions'                  convert_ecommodity_string   SELLOUT_${return_value}
+  ...   ELSE   Set Variable   ${return_value}
   [Return]  ${return_value}
 
 
@@ -325,11 +334,8 @@ Login
 
 Отримати інформацію про items[${item_num}].${field_name}
   ${return_value}=   Get Text  name=items[${item_num}].${field_name}
-  ${return_value}=   Run KeyWord If   '${field_name}' == 'quantity'
-  ...   Конвертація числа зі сторінки   ${return_value}
-  ...   ELSE   Set Variable   ${return_value}
-  ${return_value}=   Run KeyWord If   '${field_name}' == 'registrationDetails.status'
-  ...   Отримати інформацію з активу про attribute registrationDetails.status   ${item_num}
+  ${return_value}=   Run KeyWord If   '${field_name}' == 'quantity'   Конвертація числа зі сторінки   ${return_value}
+  ...   ELSE IF   '${field_name}' == 'registrationDetails.status'     Отримати інформацію з активу про attribute registrationDetails.status   ${item_num}
   ...   ELSE   Set Variable   ${return_value}
   [Return]  ${return_value}
 
@@ -470,7 +476,6 @@ Login
   [return]  ${file_name}
 
 
-#TEST
 Отримати кількість активів в об'єкті МП
   [Arguments]  ${username}  ${asset_uaid}
   ecommodity.Пошук об’єкта МП по ідентифікатору  ${username}  ${asset_uaid}
@@ -548,9 +553,21 @@ Login
   Input Text  id=guarantee_amount  ${guarantee_amount}
   ${registrationFee}=  Convert To String  ${auction.registrationFee.amount}
   Input Text  id=registrationFee_amount  ${registrationFee}
+  Input Text  id=accountDetails_description  ${auction.bankAccount.description}
+  Input Text  id=accountDetails_bankName  ${auction.bankAccount.bankName}
+  Click Element  id=actionCreateItemID
+  Sleep  2
+  Wait Until Element Is Visible  id=formCreateAccIdentID  15
+  Select From List By Value   xpath=//form[@id='formCreateAccIdentID']/descendant::select[@id='scheme']  ${auction.bankAccount.accountIdentification[0].scheme}
+  Input Text  xpath=//form[@id='formCreateAccIdentID']/descendant::input[@id='id']  ${auction.bankAccount.accountIdentification[0].id}
+  Input Text  xpath=//form[@id='formCreateAccIdentID']/descendant::textarea[@id='description']  ${auction.bankAccount.accountIdentification[0].description}
+  Click Element  id=saveNewAccIdentID
+  Wait Until Page Does Not Contain Element  id=formCreateAccIdentID  15
 
 Додати умови проведення аукціону номер 1
   [Arguments]  ${username}  ${lot_uaid}  ${auction}
+  ${accelerator}=  Set Variable  1440
+  Input Text  id=Accelerator  ${accelerator}
   ${duration}=  convert_iso8601Duration  ${auction.tenderingDuration}
   Input Text  id=Duration_Days  ${duration}
   Scroll Page To Element XPATH  xpath=//input[@id='clickPublishSubmitId']
@@ -606,6 +623,13 @@ Login
 Отримати інформацію про auctions[${auc_num}].tenderAttempts
   ${return_value}=   Get Text   name=auctions[${auc_num}].tenderAttempts
   ${return_value}=   convert_ecommodity_string   ${return_value}
+  [Return]  ${return_value}
+
+Отримати інформацію про auctions[${auc_num}].auctionID
+  Sleep   60
+  Reload Page
+  Execute JavaScript    $('.hiddenContentDetails').show();
+  ${return_value}=   Get Text   name=auctions[${auc_num}].auctionID
   [Return]  ${return_value}
 
 Отримати інформацію про auctions[${auc_num}].${value_type}.amount
@@ -786,6 +810,316 @@ Login
   Switch browser   ec_${username}
   Go to   ${USERS.users['${username}'].homepage}
   ecommodity.Пошук лоту по ідентифікатору  ${username}  ${lot_uaid}
+
+############################### АУКЦИОН ######################################################
+
+Пошук тендера по ідентифікатору
+  [Arguments]  ${username}  ${tender_uaid}
+  Switch browser   ec_${username}
+  Go to   ${USERS.users['${username}'].homepage}
+  Click Element   id=tendersPageBtn
+  Wait Until Element Is Visible   xpath=//input[@id = 'btnClearFilter']   15
+  Scroll Page To Element XPATH   xpath=//input[@id='btnClearFilter']
+  Click Button   id=btnClearFilter
+  Input Text     id=tenderID   ${tender_uaid}
+  Scroll Page To Element XPATH   xpath=//input[@id='btnFilter']
+  Click Button   id=btnFilter
+  Wait Until Element Is Not Visible   xpath=//div[@id = 'divFilter']/descendant::div[@name='loadingIDFilter']   25
+  Scroll Page To Top
+  Click Element   xpath=//a[@id = 'showDetails_${tender_uaid}']
+  Wait Until Element Is Visible   xpath=//div[@name = 'divTenderDetails']   15
+
+Оновити сторінку з тендером
+  [Arguments]  ${username}  ${tender_uaid}
+  Switch browser   ec_${username}
+  Go to   ${USERS.users['${username}'].homepage}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+
+Задати питання
+  [Arguments]  ${username}  ${tender_uaid}  ${question}  ${btnlocator}
+  ${title}=        Get From Dictionary  ${question.data}  title
+  ${description}=  Get From Dictionary  ${question.data}  description
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Execute JavaScript    $('.hiddenContentDetails').show();
+  Scroll Page To Element XPATH   ${btnlocator}
+  Sleep   1
+  Click Element       ${btnlocator}
+  Wait Until Element Is Visible    xpath=//div[@id='questionBodyId']   20
+  Input Text          xpath=//div[@id='questionBodyId']/descendant::input[@id='title']             ${title}
+  Input Text          xpath=//div[@id='questionBodyId']/descendant::textarea[@id='description']    ${description}
+  Sleep  1
+  Click Element       xpath=//div[@id="questionBodyId"]/descendant::input[@type='submit']
+  Wait Until Element Is Not Visible   xpath=//div[@id="questionBodyId"]   20
+
+Задати запитання на тендер
+  [Arguments]  ${username}  ${tender_uaid}  ${question}
+  ${btnlocator}=   Set Variable   xpath=//a[@id='сbtnAddQuestion']
+  ecommodity.Задати питання  ${username}  ${tender_uaid}  ${question}  ${btnlocator}
+
+Задати запитання на предмет
+  [Arguments]  ${username}  ${tender_uaid}  ${item_id}  ${question}
+  ${btnlocator}=   Set Variable   xpath=//dd[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]/descendant::a[contains(@id,'btnAddItemQuestion_')]
+  ecommodity.Задати питання  ${username}  ${tender_uaid}  ${question}  ${btnlocator}
+
+Відповісти на запитання
+  [Arguments]  ${username}  ${tender_uaid}  ${answer_data}  ${question_id}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Execute JavaScript    $('.hiddenContentDetails').show();
+  ${present}=  Run Keyword And Return Status    Page Should Contain Element   xpath=//img[@name='IMG_Load_Question']
+  Run Keyword If  ${present}   Run Keywords
+  ...   Execute Javascript   $('div[name="Div_Questions"]').hide();
+  ...   AND   Execute Javascript   $('a[name="ActionShowQuestions"]').click();
+  ...   AND   Wait Until Page Does Not Contain Element   xpath=//img[@name='IMG_Load_Question']  30
+  ${locator_send_answer}=   Set Variable   xpath=//dd[contains(text(),'${question_id}')]/ancestor::div[@name='div_show_question']/descendant::a[@name='ActionSendAnswer']
+  Scroll Page To Element XPATH   ${locator_send_answer}
+  Sleep   1
+  Click Element   ${locator_send_answer}
+  Wait Until Element Is Visible   xpath=//div[@id="questionBodyId"]   20
+  Input Text      xpath=//div[@id="questionBodyId"]/descendant::textarea[@id='answer']        ${answer_data.data.answer}
+  Sleep   1
+  Click Element   xpath=//div[@id="questionBodyId"]/descendant::input[@type='submit']
+  Wait Until Element Is Not Visible   xpath=//div[@id="questionBodyId"]   20
+
+Отримати інформацію із тендера
+  [Arguments]  ${username}  ${tender_uaid}  ${field_name}
+  Execute JavaScript    $('.hiddenContentDetails').show();
+  ${return_value}=   Run KeyWord  Отримати інформацію про ${fieldname}
+  [Return]  ${return_value}
+
+Отримати інформацію із предмету
+  [Arguments]  ${username}  ${tender_uaid}  ${item_id}  ${field_name}
+  Execute JavaScript    $('.hiddenContentDetails').show();
+  ${path_value}=   Set Variable  xpath=//dd[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
+  ${item_num}=  Get Element Attribute   ${path_value}@item_num
+  ${return_value}=   Run KeyWord   Отримати інформацію про items[${item_num}].${field_name}
+  [Return]  ${return_value}
+
+Отримати інформацію із запитання
+  [Arguments]  ${username}  ${tender_uaid}  ${question_id}  ${field_name}
+  ${field_namefull}=  Отримати шлях до поля об’єкта  ${username}  ${field_name}  ${question_id}
+  ${value}=  Run Keyword  Отримати інформацію про ${field_namefull}
+  [return]  ${value}
+
+Отримати інформацію про questions[${q_id}].${field_name}
+  Execute JavaScript    $('.hiddenContentDetails').show();
+  ${present}=  Run Keyword And Return Status    Page Should Contain Element   xpath=//img[@name='IMG_Load_Question']
+  Run Keyword If  ${present}   Run Keywords
+  ...   Execute Javascript   $('div[name="Div_Questions"]').hide();
+  ...   AND   Execute Javascript   $('a[name="ActionShowQuestions"]').click();
+  ...   AND   Wait Until Page Does Not Contain Element   xpath=//img[@name='IMG_Load_Question']  30
+  ${return_value}=  Get Text  name=questions[${q_id}].${field_name}
+  ${return_value}=   Run Keyword If   "${field_name}" == "date"   ecommodity_convertdate   ${return_value}
+  ...   ELSE   Set Variable   ${return_value}
+  [Return]  ${return_value}
+
+Отримати інформацію із документа
+  [Arguments]  ${username}  ${tender_uaid}  ${doc_id}  ${field}
+  Execute JavaScript    $('.hiddenContentDetails').show();  
+  ${div_id}=   Run Keyword If   'скасування' in '${TEST_NAME}'
+  ...   Set Variable          cancellationDocumentsDetails
+  ...   ELSE   Set Variable   tenderDocumentsDetails
+  ${path_value}=     Set Variable  xpath=//div[@id='${div_id}']/descendant::dd[contains(text(),'${doc_id}')]/ancestor::div[contains(@name,'div_document_body_')]/descendant::dd[@name='documents.${field}']
+  ${return_value}=   Get Text   ${path_value}
+  ${return_value}=   Run Keyword If   "${field}" == "documentType"   Get Element Attribute   ${path_value}@title
+  ...   ELSE   Set Variable   ${return_value}
+  [Return]  ${return_value}
+
+Подати цінову пропозицію
+    [Arguments]  ${username}  ${tender_uaid}  ${test_bid_data}
+    ${qualified}=       Get From Dictionary     ${test_bid_data.data}          qualified
+    ${amount}=          Get From Dictionary     ${test_bid_data.data.value}    amount
+    ${amount}=          Convert To String       ${amount}
+    ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+    Click Element       id=btnAddBid
+    Sleep   1
+    Wait Until Element Is Visible   xpath=//input[@id = 'value_amount']   15
+    Input Text          xpath=//input[@id = 'value_amount']       ${amount}
+    Sleep   1
+    Run Keyword If  ${qualified}   Select Checkbox   xpath=//input[@id = 'selfQualifiedBool']
+    Sleep   2
+    Click Element       xpath=//input[@id = 'btnLabelSubmitBid']
+    Sleep   1
+    Click Element       xpath=//button[@data-bb-handler='success']
+    Wait Until Element Is Visible       xpath=//input[@type='submit' and @name='SendRequestToAdmin']   30
+    ${resp}=            Get Value                        xpath=//input[@id = 'value_amount']
+    ${resp}=            ecommodity_convert_usnumber      ${resp}
+    ${resp}=            Convert To Number                ${resp}
+    Click Element       xpath=//input[@type='submit' and @name='SendRequestToAdmin']
+    Sleep   2
+    [Return]    ${resp}
+
+Отримати інформацію про auctionID
+  ${return_value}=   Отримати текст із поля і показати на сторінці   auctionID
+  [Return]  ${return_value}
+
+Отримати інформацію про minNumberOfQualifiedBids
+  ${return_value}=   Отримати текст із поля і показати на сторінці   minNumberOfQualifiedBids
+  ${return_value}=   Convert To Number   ${return_value}
+  [Return]  ${return_value}
+
+Отримати інформацію про procurementMethodType
+  ${return_value}=   Отримати текст із поля і показати на сторінці   procurementMethodType
+  ${return_value}=  convert_ecommodity_string  SELLOUT_${return_value}
+  [Return]  ${return_value}
+
+Отримати інформацію про procuringEntity.name
+  ${return_value}=   Отримати текст із поля і показати на сторінці   procuringEntity.name
+  [Return]  ${return_value}
+
+Отримати інформацію про value.amount
+  ${return_value}=   Отримати текст із поля і показати на сторінці  value.amount
+  ${return_value}=   ecommodity_convert_usnumber   ${return_value}
+  ${return_value}=   Convert To Number             ${return_value}
+  [Return]  ${return_value}
+
+Отримати інформацію про minimalStep.amount
+  ${return_value}=   Отримати текст із поля і показати на сторінці   minimalStep.amount
+  ${return_value}=   ecommodity_convert_usnumber   ${return_value}
+  ${return_value}=   Convert To Number             ${return_value}
+  [Return]   ${return_value}
+
+Отримати інформацію про guarantee.amount
+  ${return_value}=   Отримати текст із поля і показати на сторінці   guarantee.amount
+  ${return_value}=   ecommodity_convert_usnumber   ${return_value}
+  ${return_value}=   Convert To Number             ${return_value}
+  [Return]   ${return_value}
+
+Отримати інформацію про registrationFee.amount
+  ${return_value}=   Отримати текст із поля і показати на сторінці   registrationFee.amount
+  ${return_value}=   ecommodity_convert_usnumber   ${return_value}
+  ${return_value}=   Convert To Number             ${return_value}
+  [Return]   ${return_value}
+
+Отримати інформацію про tenderPeriod.endDate
+  ${return_value}=   Отримати текст із поля і показати на сторінці  tenderPeriod.endDate
+  ${return_value}=   convert_ecommodity_date_to_iso_format   ${return_value}
+  ${return_value}=   add_timezone_to_date                    ${return_value.split('.')[0]}
+  [Return]    ${return_value}
+
+Отримати пропозицію
+  [Arguments]  ${username}  ${tender_uaid}
+  ecommodity.Пошук тендера по ідентифікатору   ${username}   ${tender_uaid}
+  Click Element       id=btnViewOwnBid
+  Sleep   1
+  Wait Until Element Is Visible       xpath=//span[@id = 'span_cbd_published']   15
+  ${status}=               Get Element Attribute         xpath=//span[@id = 'span_bid_statusID']@title
+  ${data}=                 Create Dictionary             status=${status}
+  ${proposition_amount}=   Get Value                     xpath=//input[@id = 'value_amount']
+  ${proposition_amount}=   ecommodity_convert_usnumber   ${proposition_amount}
+  ${proposition_amount}=   Convert To Number             ${proposition_amount}
+  ${value}=                Create Dictionary             amount=${proposition_amount}
+  Set To Dictionary  ${data}    value=${value}
+  ${bid}=   Create Dictionary   data=${data}
+  [return]  ${bid}
+
+Отримати інформацію із пропозиції
+  [Arguments]  ${username}  ${tender_uaid}  ${field}
+  ${bid}=   ecommodity.Отримати пропозицію  ${username}  ${tender_uaid}
+  [return]  ${bid.data.${field}}
+
+Змінити цінову пропозицію
+    [Arguments]  ${username}  ${tender_uaid}  ${fieldname}  ${fieldvalue}
+    ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+    Click Element       id=btnViewOwnBid
+    Sleep   1
+    Wait Until Element Is Visible   xpath=//a[@id = 'btnEditBid']   15
+    Click Element       xpath=//a[@id = 'btnEditBid']
+    Sleep   1
+    Wait Until Element Is Visible   xpath=//input[@id = 'value_amount']   15
+    ${fieldvalue}=      Convert To String     ${fieldvalue}
+    Input Text          xpath=//input[@id = 'value_amount']       ${fieldvalue}
+    Sleep   2
+    Click Element       xpath=//input[@id = 'btnLabelSubmitBid']
+    Sleep   1
+    Click Element       xpath=//button[@data-bb-handler='success']
+    Wait Until Element Is Visible       xpath=//input[@type='submit' and @name='SendRequestToAdmin']   30
+    ${resp}=            Get Value                        xpath=//input[@id = 'value_amount']
+    ${resp}=            ecommodity_convert_usnumber      ${resp}
+    ${resp}=            Convert To Number                ${resp}
+    Click Element       xpath=//input[@type='submit' and @name='SendRequestToAdmin']
+    Sleep   2
+    [Return]    ${resp}
+
+Завантажити документ в ставку
+    [Arguments]  ${username}  ${filepath}  ${tender_uaid}  ${documentType}=commercialProposal
+    ecommodity.Отримати пропозицію   ${username}   ${tender_uaid}
+    Click Element        xpath=//a[@id = 'btnEditBid']
+    Sleep   1
+    Wait Until Element Is Visible   xpath=//a[@id='add_bid_doc_']   15
+    Click Element        xpath=//a[@id='add_bid_doc_']
+    ${documentTypeID}=   convert_documentType_string   ${documentType}
+    Wait Until Element Is Visible   xpath=//div[@id="DocumentBid"]/descendant::input[@id='titleID_NewDocument']   25
+    Page Should Contain Element     xpath=//div[@id='DocumentBid']/descendant::select[@id="NewDocument_DocumentType_ID"]/option[@value="${documentTypeID}"]
+    Select From List     xpath=//div[@id='DocumentBid']/descendant::select[@id="NewDocument_DocumentType_ID"]   ${documentTypeID}
+    Execute JavaScript   $(document.evaluate("/html/.//div[@id='DocumentBid']/descendant::input[@id='uploadFileId_NewDocument']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue).show()
+    Choose File          xpath=//div[@id="DocumentBid"]/descendant::input[@id="uploadFileId_NewDocument"]    ${filepath}
+    Sleep   1
+    ${fake_name}=   Get Value   xpath=//div[@id="DocumentBid"]/descendant::input[@id="DocumentuploadFileId_NewDocument"]
+    Input Text      xpath=//div[@id="DocumentBid"]/descendant::input[@id='titleID_NewDocument']   ${fake_name}
+    Click Element   xpath=//div[@id="DocumentBid"]/descendant::input[@name='AddBidDocument']
+    Wait Until Page Does Not Contain   xpath=//div[@id="DocumentBid"]   20
+    Click Button       id=btnLabelSubmitBid
+    Sleep   1
+    Click Element       xpath=//button[@data-bb-handler='success']
+    Wait Until Element Is Visible    xpath=//input[@type='submit' and @name='SendRequestToAdmin']   30
+    Click Element       xpath=//input[@type='submit' and @name='SendRequestToAdmin']
+    Sleep   1
+
+Скасувати цінову пропозицію
+  [Arguments]  ${username}  ${tender_uaid}
+  ecommodity.Отримати пропозицію  ${username}  ${tender_uaid}
+  Click Element  xpath=//input[@name='bSendBidToAPIDelete']
+  Sleep   1
+  Click Element  xpath=//button[@data-bb-handler='success']
+
+Отримати посилання на аукціон для глядача
+    [Arguments]  ${username}  ${tender_uaid}
+    ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+    Execute JavaScript  $('.hiddenContentDetails').show();
+    ${result}=  Get Element Attribute  id=public_auctionUrl@href
+    [Return]  ${result}
+
+Отримати посилання на аукціон для учасника
+    [Arguments]  ${username}  ${tender_uaid}  ${lot_id}=${Empty}
+    ecommodity.Отримати пропозицію   ${username}   ${tender_uaid}
+    ${notpresent}=   Run Keyword And Return Status   Page Should Not Contain Element   id=private_participationUrl
+    Run Keyword If   ${notpresent}   Run Keywords
+    ...   Sleep   102
+    ...   AND   ecommodity.Отримати пропозицію   ${username}   ${tender_uaid}
+    ${result}=   Get Element Attribute   id=private_participationUrl@href
+    [Return]   ${result}
+
+Скасувати закупівлю
+    [Arguments]  ${username}  ${tender_uaid}  ${cancellation_reason}  ${document}  ${new_description}
+    ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+    Wait Until Element Is Visible       id=btnCancelTender   10
+    Click Element                       id=btnCancelTender
+    Sleep  2
+    Input text                          xpath=//textarea[@id="Cancel_reason"]      ${cancellation_reason}
+    Click Element                       xpath=//a[@id='actionCreateDocumentID']
+    Wait Until Element Is Visible       xpath=//div[@id="createADocForm"]   15
+    Execute JavaScript                  $('input[id="createUploadFileId"]').show()
+    Choose File                         xpath=//input[@id="createUploadFileId"]    ${document}
+    Input text                          xpath=//div[@id="createADocForm"]/descendant::textarea[@id="description_adoc"]        ${new_description}
+    Sleep   1
+    Click Button                        id=createSubmitId
+    Wait Until Element Is Not Visible   xpath=//div[@id="createADocForm"]   20
+    Sleep   2
+    Click Element                       xpath=//input[@id="submitClickId"]
+    Wait Until Page Does Not Contain Element   xpath=//input[@id="submitClickId"]   20
+
+Отримати інформацію про cancellations[0].reason
+  ${return_value}=  Get text          ${locator.cancellations[0].reason}
+  [Return]  ${return_value}
+
+Отримати інформацію про cancellations[0].status
+  ${return_value}=  Get Element Attribute          ${locator.cancellations[0].status}
+  [Return]  ${return_value}
+
+Активувати процедуру
+  [Arguments]  ${username}  ${tender_uaid}
+  Sleep   60
+  ecommodity.Оновити сторінку з тендером  ${username}  ${tender_uaid}
 
 #SV
 Scroll Page To Element XPATH
