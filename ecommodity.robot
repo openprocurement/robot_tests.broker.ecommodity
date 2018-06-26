@@ -878,7 +878,7 @@ Login
   Input Text      xpath=//div[@id="questionBodyId"]/descendant::textarea[@id='answer']        ${answer_data.data.answer}
   Sleep   1
   Click Element   xpath=//div[@id="questionBodyId"]/descendant::input[@type='submit']
-  Wait Until Element Is Not Visible   xpath=//div[@id="questionBodyId"]   20
+  Wait Until Page Does Not Contain Element   xpath=//div[@id="questionBodyId"]   20
 
 Отримати інформацію із тендера
   [Arguments]  ${username}  ${tender_uaid}  ${field_name}
