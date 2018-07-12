@@ -9,7 +9,11 @@ import re
 def ecommodity_convertdate(isodate):
     date = dateutil.parser.parse(isodate)
     return date.strftime("%d.%m.%Y %H:%M")
-	
+
+def ecommodity_convertdateS(isodate):
+    date = dateutil.parser.parse(isodate)
+    return date.strftime("%d.%m.%Y %H:%M:%S")
+
 def ecommodity_remove_space(value):
     return value.replace(" ", "").replace(u' ', '')
 
@@ -62,6 +66,9 @@ def convert_CAVMP(string):
             '08110000-0': '301',
             '08160000-5': '302',
             }.get(string, string)
+
+def convert_ecommodity_accelerator_from_string(str_accelerator):
+    return re.findall(r'\d+', str_accelerator)[-1]
 
 def set_item_property(tender_data):
    for item in tender_data['data']['items']:
@@ -182,6 +189,7 @@ def convert_documentType_string(string):
     return {
             'notice': '1',
             'technicalSpecifications': '3',
+            'contractSigned': '17',
             'commercialProposal': '22',
             'eligibilityDocuments': '24',
             'tenderNotice': '28',
@@ -194,4 +202,7 @@ def convert_documentType_string(string):
             'x_nda': '35',
             'x_dgfAssetFamiliarization': '37',
             'cancellationDetails': '38',
+            'admissionProtocol': '41',
+            'rejectionProtocol': '42',
+            'act': '43',
             }.get(string, string)
