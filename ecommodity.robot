@@ -106,7 +106,7 @@ Login
     Input text  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::input[@id='address_region']           ${h_address_region}
     Input text  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::input[@id='address_postalCode']       ${h_address_postalCode}
     Input text  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::input[@id='address_countryName']      ${h_address_countryName}
-    Click Element  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::a[@href='#contactPoint_ID']
+    Click Element  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::a[@href='#contactPointData_ID']
     Sleep  1
     Input text  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::input[@id='contactPoint_name']        ${h_CP_name}
     Input text  xpath=//form[@id = 'formCreateAssetHolderID']/descendant::input[@id='contactPoint_email']       ${h_CP_email}
@@ -535,11 +535,14 @@ Login
 
 Додати умови проведення аукціону номер 0
   [Arguments]  ${username}  ${lot_uaid}  ${auction}
+  Sleep  60
   ecommodity.Пошук лоту по ідентифікатору  ${username}  ${lot_uaid}
   Click Element  id=btnEditLot
   Sleep   1
   Click Element  id=btnAuctionsEdit
   Sleep   1
+  ${accelerator}=  convert_ecommodity_accelerator_from_string  ${auction.procurementMethodDetails}
+  Input Text  id=Accelerator  ${accelerator}
   Input Text  id=auctionPeriod_startDate  ${auction.auctionPeriod.startDate}
   ${value_amount}=  Convert To String  ${auction.value.amount}
   Input Text  id=value_amount  ${value_amount}
@@ -562,12 +565,11 @@ Login
   Input Text  xpath=//form[@id='formCreateAccIdentID']/descendant::input[@id='id']  ${auction.bankAccount.accountIdentification[0].id}
   Input Text  xpath=//form[@id='formCreateAccIdentID']/descendant::textarea[@id='description']  ${auction.bankAccount.accountIdentification[0].description}
   Click Element  id=saveNewAccIdentID
+  Sleep  1
   Wait Until Page Does Not Contain Element  id=formCreateAccIdentID  15
 
 Додати умови проведення аукціону номер 1
   [Arguments]  ${username}  ${lot_uaid}  ${auction}
-  ${accelerator}=  Set Variable  1440
-  Input Text  id=Accelerator  ${accelerator}
   ${duration}=  convert_iso8601Duration  ${auction.tenderingDuration}
   Input Text  id=Duration_Days  ${duration}
   Scroll Page To Element XPATH  xpath=//input[@id='clickPublishSubmitId']
@@ -1120,6 +1122,152 @@ Login
   [Arguments]  ${username}  ${tender_uaid}
   Sleep   60
   ecommodity.Оновити сторінку з тендером  ${username}  ${tender_uaid}
+
+############################### КВАЛИФИКАЦИЯ ###################################################
+
+Отримати інформацію про awards[${award_index}].status
+  ${status}=   Get Element Attribute   xpath=//dd[@name="awards[${award_index}].status"]@title
+  [Return]   ${status}
+
+Отримати кількість авардів в тендері
+  [Arguments]  ${username}  ${tender_uaid}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Execute JavaScript    $('.hiddenContentDetails').show();
+  ${return_value}=  Get Element Count  xpath=//div[@id="awardViewID"]/descendant::div[contains(@id,"awardDiv_")]
+  [Return]  ${return_value}
+
+Знайти кваліфікацію по індексу
+  [Arguments]  ${username}  ${tender_uaid}  ${award_num}
+  ecommodity.Пошук тендера по ідентифікатору    ${username}    ${tender_uaid}
+  Sleep  1
+  ${not_present_qual}=   Run Keyword And Return Status   Page Should Not Contain Element   xpath=//a[@id="btnQualification"]
+  Run Keyword If   ${not_present_qual}   Run Keywords
+  ...   Sleep   102
+  ...   AND   ecommodity.Пошук тендера по ідентифікатору    ${username}    ${tender_uaid}
+  ...   AND   Sleep   1
+  Click Element                    xpath=//a[@id="btnQualification"]
+  Click Element                    xpath=//a[@id="btnQualificationEdit_${award_num}"]
+  Sleep  1
+
+Додати документ до кваліфікації
+  [Arguments]   ${filepath}   ${documentType}
+  Click Element                              xpath=//a[@id="actionCreateDocumentID"]
+  Wait Until Element Is Visible              xpath=//div[@id="createADocForm"]   15
+  ${documentTypeID}=                         convert_documentType_string   ${documentType}
+  Page Should Contain Element                xpath=//select[@id='DocumentType_ID']/option[@value="${documentTypeID}"]
+  Select From List By Value                  xpath=//select[@id='DocumentType_ID']   ${documentTypeID}
+  Execute JavaScript                         $('input[id="createUploadFileId"]').show()
+  Choose File                                xpath=//input[@id="createUploadFileId"]    ${filepath}
+  Click Button                               id=createSubmitId
+  Wait Until Page Does Not Contain Element   xpath=//div[@id="createADocForm"]   20
+
+Завантажити протокол аукціону в авард
+  [Arguments]  ${username}  ${tender_uaid}  ${filepath}  ${award_index}
+  ecommodity.Знайти кваліфікацію по індексу  ${username}  ${tender_uaid}  ${award_index}
+  ecommodity.Додати документ до кваліфікації  ${filepath}  auctionProtocol
+
+Завантажити протокол погодження в авард
+  [Arguments]  ${username}  ${tender_uaid}  ${filepath}  ${award_index}
+  ecommodity.Знайти кваліфікацію по індексу  ${username}  ${tender_uaid}  ${award_index}
+  ecommodity.Додати документ до кваліфікації  ${filepath}  admissionProtocol
+
+Активувати кваліфікацію учасника
+  [Arguments]  ${username}  ${tender_uaid}
+  ${award_num}=  Set Variable  0
+  ecommodity.Знайти кваліфікацію по індексу   ${username}  ${tender_uaid}  ${award_num}
+  Click Element  xpath=//button[@id='bSet_active']
+  Sleep   2
+  Click Element  xpath=//button[@data-bb-handler='success']
+  Sleep   1
+
+Підтвердити постачальника
+  [Arguments]  ${username}  ${tender_uaid}  ${award_num}
+  ecommodity.Знайти кваліфікацію по індексу   ${username}  ${tender_uaid}  ${award_num}
+  Click Element  xpath=//button[@id='bSet_active']
+  Sleep   2
+  Click Element  xpath=//button[@data-bb-handler='success']
+  Sleep   1
+
+Завантажити протокол дискваліфікації в авард
+  [Arguments]  ${username}  ${tender_uaid}  ${filepath}  ${award_num}
+  ecommodity.Знайти кваліфікацію по індексу      ${username}  ${tender_uaid}  ${award_num}
+  Click Element   xpath=//a[@id='aSet_unsuccessful']
+  Wait Until Page Contains Element   xpath=//button[@id='btnDisqualProtocolYN']   15
+  ecommodity.Додати документ до кваліфікації  ${filepath}  rejectionProtocol
+
+Дискваліфікувати постачальника
+  [Arguments]  ${username}  ${tender_uaid}  ${award_num}  ${description}
+  ecommodity.Знайти кваліфікацію по індексу    ${username}  ${tender_uaid}  ${award_num}
+  Click Element   xpath=//a[@id='aSet_unsuccessful']
+  Wait Until Page Contains Element   xpath=//button[@id='btnDisqualProtocolYN']   15
+  Input Text    xpath=//textarea[@id='description']   ${description}
+  Click Element  xpath=//button[@id='btnDisqualProtocolYN']
+  Sleep   1
+  Click Element  xpath=//button[@data-bb-handler='success']
+
+Скасування рішення кваліфікаційної комісії
+  [Arguments]  ${username}  ${tender_uaid}  ${award_num}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Click Element       id=btnViewOwnBid
+  Sleep   1
+  Wait Until Element Is Visible   id=buttonRejectSecondPlaceBidUser   15
+  Click Button        id=buttonRejectSecondPlaceBidUser
+  Sleep   1
+  Click Element       xpath=//button[@data-bb-handler='success']
+
+############################### КОНТРАКТ ###################################################
+
+Додати документ до контракту
+  [Arguments]   ${username}  ${tender_uaid}  ${filepath}  ${documentType}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Wait Until Element Is Visible              xpath=//a[@id="btnContractSigning"]      30
+  Click Element                              xpath=//a[@id="btnContractSigning"]
+  Wait Until Element Is Visible              xpath=//a[@id="actionCreateDocumentID"]  30
+  Click Element                              xpath=//a[@id="actionCreateDocumentID"]
+  Wait Until Element Is Visible              xpath=//div[@id="createADocForm"]   15
+  ${documentTypeID}=                         convert_documentType_string   ${documentType}
+  Page Should Contain Element                xpath=//select[@id='DocumentType_ID']/option[@value="${documentTypeID}"]
+  Select From List By Value                  xpath=//select[@id='DocumentType_ID']   ${documentTypeID}
+  Execute JavaScript                         $('input[id="createUploadFileId"]').show()
+  Choose File                                xpath=//input[@id="createUploadFileId"]    ${filepath}
+  Click Button                               id=createSubmitId
+  Wait Until Page Does Not Contain Element   xpath=//div[@id="createADocForm"]   20
+
+Завантажити протокол скасування в контракт
+  [Arguments]  ${username}  ${tender_uaid}  ${filepath}  ${contract_index}
+  ecommodity.Додати документ до контракту  ${username}  ${tender_uaid}  ${filepath}  rejectionProtocol
+
+Скасувати контракт
+  [Arguments]  ${username}  ${tender_uaid}  ${contract_index}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Wait Until Element Is Visible       xpath=//a[@id="btnContractSigning"]      30
+  Click Element                       xpath=//a[@id="btnContractSigning"]
+  Wait Until Page Contains Element   xpath=//button[@id='btnDisqualProtocolYN']   15
+  Click Element  xpath=//button[@id='btnDisqualProtocolYN']
+  Sleep   1
+  Click Element  xpath=//button[@data-bb-handler='success']
+
+Встановити дату підписання угоди
+  [Arguments]  ${username}  ${tender_uaid}  ${contract_index}  ${fieldvalue}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Wait Until Element Is Visible       xpath=//a[@id="btnContractSigning"]      30
+  Click Element                       xpath=//a[@id="btnContractSigning"]
+  Wait Until Page Contains Element    xpath=//input[@id='dateSigned']   15
+  ${fieldvalue}=  ecommodity_convertdateS  ${fieldvalue}
+  Input Text  xpath=//input[@id='dateSigned']  ${fieldvalue}
+  Click Element  id=bSetContractPending
+
+Завантажити угоду до тендера
+  [Arguments]  ${username}  ${tender_uaid}  ${contract_index}  ${filepath}
+  ecommodity.Додати документ до контракту  ${username}  ${tender_uaid}  ${filepath}  contractSigned
+
+Підтвердити підписання контракту
+  [Arguments]  ${username}  ${tender_uaid}  ${contract_index}
+  ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
+  Wait Until Element Is Visible       xpath=//a[@id="btnContractSigning"]      30
+  Click Element                       xpath=//a[@id="btnContractSigning"]
+  Wait Until Page Contains Element    id=bSetContractActive   15
+  Click Element                       id=bSetContractActive
 
 #SV
 Scroll Page To Element XPATH
