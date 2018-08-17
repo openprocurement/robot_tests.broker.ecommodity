@@ -1280,7 +1280,7 @@ Login
 
 Активувати контракт
   [Arguments]  ${username}  ${contract_uaid}
-  Sleep  60
+  Sleep  240
 
 Пошук умов договору по ідентифікатору
   [Arguments]  ${username}  ${contract_uaid}
