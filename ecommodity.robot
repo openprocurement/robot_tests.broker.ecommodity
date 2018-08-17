@@ -326,7 +326,7 @@ Login
 Отримати інформацію з активу об'єкта МП
   [Arguments]  ${username}  ${asset_uaid}  ${item_id}  ${field_name}
   Execute JavaScript    $('.hiddenContentDetails').show();
-  ${path_value}=   Set Variable  xpath=//dd[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
+  ${path_value}=   Set Variable  xpath=//div[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
   ${item_num}=  Get Element Attribute   ${path_value}@item_num
   ${return_value}=   Run KeyWord   Отримати інформацію про items[${item_num}].${field_name}
   [Return]  ${return_value}
@@ -523,7 +523,7 @@ Login
 Отримати інформацію з активу лоту
   [Arguments]  ${username}  ${lot_uaid}  ${item_id}  ${field_name}
   Execute JavaScript    $('.hiddenContentDetails').show();
-  ${path_value}=   Set Variable  xpath=//dd[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
+  ${path_value}=   Set Variable  xpath=//div[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
   ${item_num}=  Get Element Attribute   ${path_value}@item_num
   ${return_value}=   Run KeyWord   Отримати інформацію про items[${item_num}].${field_name}
   [Return]  ${return_value}
@@ -860,7 +860,7 @@ Login
 
 Задати запитання на предмет
   [Arguments]  ${username}  ${tender_uaid}  ${item_id}  ${question}
-  ${btnlocator}=   Set Variable   xpath=//dd[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]/descendant::a[contains(@id,'btnAddItemQuestion_')]
+  ${btnlocator}=   Set Variable   xpath=//div[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]/descendant::a[contains(@id,'btnAddItemQuestion_')]
   ecommodity.Задати питання  ${username}  ${tender_uaid}  ${question}  ${btnlocator}
 
 Відповісти на запитання
@@ -891,7 +891,7 @@ Login
 Отримати інформацію із предмету
   [Arguments]  ${username}  ${tender_uaid}  ${item_id}  ${field_name}
   Execute JavaScript    $('.hiddenContentDetails').show();
-  ${path_value}=   Set Variable  xpath=//dd[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
+  ${path_value}=   Set Variable  xpath=//div[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
   ${item_num}=  Get Element Attribute   ${path_value}@item_num
   ${return_value}=   Run KeyWord   Отримати інформацію про items[${item_num}].${field_name}
   [Return]  ${return_value}
@@ -997,6 +997,12 @@ Login
   ${return_value}=   convert_ecommodity_date_to_iso_format   ${return_value}
   ${return_value}=   add_timezone_to_date                    ${return_value.split('.')[0]}
   [Return]    ${return_value}
+
+Отримати інформацію про contracts[${contract_index}].contractID
+  ${return_value}=   Run KeyWord If  ${contract_index} == -1
+  ...   Get Text   xpath=//dd[@name = 'lastContractID']
+  ...   ELSE   Get Text  id=contracts[${contract_index}].contractID
+  [Return]  ${return_value}
 
 Отримати пропозицію
   [Arguments]  ${username}  ${tender_uaid}
@@ -1133,7 +1139,8 @@ Login
   [Arguments]  ${username}  ${tender_uaid}
   ecommodity.Пошук тендера по ідентифікатору  ${username}  ${tender_uaid}
   Execute JavaScript    $('.hiddenContentDetails').show();
-  ${return_value}=  Get Element Count  xpath=//div[@id="awardViewID"]/descendant::div[contains(@id,"awardDiv_")]
+  ${return_value}=  Get Matching Xpath Count  //div[@id="awardViewID"]/descendant::div[contains(@id,"awardDiv_")]
+  ${return_value}=  Convert To Integer  ${return_value}
   [Return]  ${return_value}
 
 Знайти кваліфікацію по індексу
@@ -1268,6 +1275,142 @@ Login
   Click Element                       xpath=//a[@id="btnContractSigning"]
   Wait Until Page Contains Element    id=bSetContractActive   15
   Click Element                       id=bSetContractActive
+
+############################### ВИКОНАННЯ УМОВ ДОГОВОРУ ###################################################
+
+Активувати контракт
+  [Arguments]  ${username}  ${contract_uaid}
+  Sleep  60
+
+Пошук умов договору по ідентифікатору
+  [Arguments]  ${username}  ${contract_uaid}
+  Switch browser   ec_${username}
+  Go to   ${USERS.users['${username}'].homepage}
+  Click Element   id=tendersPageBtn
+  Wait Until Element Is Visible   xpath=//input[@id = 'btnClearFilter']   15
+  Scroll Page To Element XPATH   xpath=//input[@id='btnClearFilter']
+  Click Button   id=btnClearFilter
+  Input Text     id=contractID   ${contract_uaid}
+  Scroll Page To Element XPATH   xpath=//input[@id='btnFilter']
+  Click Button   id=btnFilter
+  Wait Until Element Is Not Visible   xpath=//div[@id = 'divFilter']/descendant::div[@name='loadingIDFilter']   25
+  Scroll Page To Top
+  Click Element   xpath=//a[contains(@id,'showDetails_')]
+  Wait Until Element Is Visible   xpath=//div[@name = 'divTenderDetails']   15
+
+Знайти умови договору для редагування
+  [Arguments]  ${username}  ${contract_uaid}
+  ecommodity.Пошук умов договору по ідентифікатору  ${username}  ${contract_uaid}
+  Wait Until Element Is Visible       xpath=//a[@id="btnContracting"]      30
+  Click Element                       xpath=//a[@id="btnContracting"]
+  Wait Until Page Contains Element    id=clickPublishSubmitId   15
+
+Отримати інформацію із договору
+  [Arguments]  ${username}  ${contract_uaid}  ${field}
+  ecommodity.Пошук умов договору по ідентифікатору  ${username}  ${contract_uaid}
+  Execute JavaScript  $('.hiddenContentDetails').show();
+  Sleep  1
+  ${return_value}=  Run KeyWord  ecommodity.Отримати інформацію із договору про ${field}
+  [Return]  ${return_value}
+
+Отримати інформацію із договору про status
+  ${status}=   Get Element Attribute   xpath=//dd[@name="contracting.status"]@title
+  [Return]   ${status}
+
+Отримати інформацію із договору про milestones[${milIndex}].status
+  ${status}=   Get Element Attribute   xpath=//dd[@name="milestones[${milIndex}].status"]@title
+  [Return]   ${status}
+
+Отримати інформацію із договору про milestones[${milIndex}].dueDate
+  ${return_value}=   Get Element Attribute   xpath=//dd[@name="milestones[${milIndex}].dueDate"]@isodate
+  [Return]   ${return_value}
+
+Отримати інформацію із договору про milestones[${milIndex}].dateMet
+  ${return_value}=   Get Element Attribute   xpath=//dd[@name="milestones[${milIndex}].dateMet"]@isodate
+  [Return]   ${return_value}
+
+Отримати інформацію з активу в договорі
+  [Arguments]  ${username}  ${contract_uaid}  ${item_id}  ${field}
+  ecommodity.Пошук умов договору по ідентифікатору  ${username}  ${contract_uaid}
+  Execute JavaScript  $('.hiddenContentDetails').show();
+  Sleep  1
+  ${path_value}=   Set Variable  xpath=//div[contains(text(),'${item_id}')]/ancestor::div[contains(@id,'ItemDetails_')]
+  ${item_num}=  Get Element Attribute   ${path_value}@item_num
+  ${return_value}=   Run KeyWord   Отримати інформацію про items[${item_num}].${field}
+  [Return]  ${return_value}
+
+Вказати дату отримання оплати
+  [Arguments]  ${username}  ${contract_uaid}  ${dateMet}  ${milestone_index}
+  ecommodity.Знайти умови договору для редагування  ${username}  ${contract_uaid}
+  ${dateMet}=  ecommodity_convertdateS  ${dateMet}
+  Input Text    name=lstMilestones[${milestone_index}].dateMet   ${dateMet}
+  Click Element  id=clickPublishDateMetSubmitId
+  Sleep  5
+
+Підтвердити відсутність оплати
+  [Arguments]  ${username}  ${contract_uaid}  ${milestone_index}
+  ecommodity.Знайти умови договору для редагування  ${username}  ${contract_uaid}
+  Click Element  id=clickMilCancelSubmitId
+  Sleep  1
+  Click Element  xpath=//button[@data-bb-handler='success']
+  Sleep  5
+
+Заповнити документ до умов договору
+  [Arguments]  ${username}  ${contract_uaid}  ${filepath}  ${documentType}
+  Wait Until Element Is Visible              xpath=//div[@id="createADocForm"]   15
+  ${documentTypeID}=                         convert_documentType_string   ${documentType}
+  Page Should Contain Element                xpath=//select[@id='DocumentType_ID']/option[@value="${documentTypeID}"]
+  Select From List By Value                  xpath=//select[@id='DocumentType_ID']   ${documentTypeID}
+  Execute JavaScript                         $('input[id="createUploadFileId"]').show()
+  Choose File                                xpath=//input[@id="createUploadFileId"]    ${filepath}
+  Click Button                               id=createSubmitId
+  Wait Until Page Does Not Contain Element   xpath=//div[@id="createADocForm"]   20
+
+Додати документ до умов договору
+  [Arguments]  ${username}  ${contract_uaid}  ${filepath}  ${documentType}  ${milestone_index}
+  ecommodity.Знайти умови договору для редагування  ${username}  ${contract_uaid}
+  Click Element  xpath=//a[@id="addMilestoneDocID_${milestone_index}"]
+  ecommodity.Заповнити документ до умов договору  ${username}  ${contract_uaid}  ${filepath}  ${documentType}
+
+Завантажити наказ про завершення приватизації
+  [Arguments]  ${username}  ${contract_uaid}  ${filepath}
+  ecommodity.Додати документ до умов договору  ${username}  ${contract_uaid}  ${filepath}  approvalProtocol  1
+
+Вказати дату прийняття наказу
+  [Arguments]  ${username}  ${contract_uaid}  ${dateMet}
+  ecommodity.Знайти умови договору для редагування  ${username}  ${contract_uaid}
+  ${dateMet}=  ecommodity_convertdateS  ${dateMet}
+  Input Text    name=lstMilestones[1].dateMet   ${dateMet}
+  Click Element  id=clickPublishDateMetSubmitId
+  Sleep  5
+
+Підтвердити відсутність наказу про приватизацію
+  [Arguments]  ${username}  ${contract_uaid}  ${filepath}
+  ecommodity.Знайти умови договору для редагування  ${username}  ${contract_uaid}
+  Click Element  id=actionCreateRejectDocumentID
+  ecommodity.Заповнити документ до умов договору  ${username}  ${contract_uaid}  ${filepath}  rejectionProtocol
+  Sleep  2
+  Click Element  xpath=//button[@data-bb-handler='success']
+  Sleep  5
+
+Вказати дату виконання умов контракту
+  [Arguments]  ${username}  ${contract_uaid}  ${dateMet}
+  ecommodity.Знайти умови договору для редагування  ${username}  ${contract_uaid}
+  ${dateMet}=  ecommodity_convertdateS  ${dateMet}
+  Input Text    name=lstMilestones[2].dateMet   ${dateMet}
+  Click Element  id=clickPublishDateMetSubmitId
+  Sleep  5
+
+Підтвердити невиконання умов приватизації
+  [Arguments]  ${username}  ${contract_uaid}
+  ecommodity.Знайти умови договору для редагування  ${username}  ${contract_uaid}
+  Click Element  id=clickMilCancelSubmitId
+  Sleep  1
+  Click Element  xpath=//button[@data-bb-handler='success']
+  Sleep  5
+
+
+
 
 #SV
 Scroll Page To Element XPATH
